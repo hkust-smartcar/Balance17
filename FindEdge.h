@@ -1,3 +1,12 @@
+/*
+ * FindEdge.h
+ *
+ *  Created on: Jul 9, 2017
+ *      Author: lzhangbj
+ */
+
+#ifndef SRC_6000_FINDEDGE_H_
+#define SRC_6000_FINDEDGE_H_
 ///*
 // * FindEdge.h
 // *
@@ -5,14 +14,12 @@
 // *      Author: lzhangbj
 // */
 
-#ifndef SRC_CAMERAHEADER_FINDEDGE_H_
-#define SRC_CAMERAHEADER_FINDEDGE_H_
 
 #include <libsc/k60/uart_device.h>
 #include <libbase/k60/uart.h>
 #include <libsc/k60/jy_mcu_bt_106.h>
 #include <libsc/lcd_typewriter.h>
-#include "CameraHeader/img.h"
+
 
 #define  BLACK					1
 #define	WHITE					0
@@ -45,6 +52,8 @@ bool RoundaboutPreTag = false;
 //bool OutInCor = false;
 //bool FindOutCor = false;
 
+int32_t StartEncoderValue = 0;
+
 int32_t OutRoundEncoderValue = 0;
 int32_t InRoundEncoderValue  = 0;
 
@@ -56,6 +65,11 @@ bool OutRoundEnd = true;
 float slope_p = 1;//30//0.2
 float pos_p = 0.4;//3
 
+
+bool LeftObstacleBegin = false;
+bool RightObstacleBegin = false;
+bool ObstacleEnd = true;
+int ObstacleEncoderValue = 0;
 
 
 int8_t Width[20]={79,78,77,76,74,72,69,66,64,64,60,60,62,63,64,65,66,67,68,70};
@@ -78,6 +92,9 @@ enum TrackState{
 	Crossroad,
 	Crossroad2,
 	Crossroad3,
+	Crossroad4,
+	Crossroad5,
+	Crossroad6,
 	Roundabout,
 	Go,
 	Straight,
@@ -281,6 +298,9 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 		return Unknown;
 	}
 
+	////////////////////////////////       corner criterion  	////////////////////////////
+
+
 	int8_t Order = 1;
 	bool LeftCorner0Found = false;
 	bool LeftCorner1Found = false;
@@ -341,14 +361,16 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 	RightCornerNum = RightCornerOrder[1];
 
 
+	////////////////////////////// 		远处两corner找到，  	且横向距离与纵向距离合理		///////////////////////////
 
-
-	if(LeftCorner[1] && RightCorner[1] && LeftCorner[1]->x < RightCorner[1]->x - 5 && LeftCorner[1]->y - RightCorner[1]->y <15 &&  LeftCorner[1]->y - RightCorner[1]->y > -15){ // 用上面两个边界点判断十字并补线
+	if(LeftCorner[1] && RightCorner[1] && LeftCorner[1]->x < RightCorner[1]->x - 5 && LeftCorner[1]->y - RightCorner[1]->y < 30 &&  LeftCorner[1]->y - RightCorner[1]->y > -30){ // 用上面两个边界点判断十字并补线
 		int8_t Base_x;
 		int8_t Base_y;
 		bool FindBlack = false;
 		bool FindWhite = false;
 		int8_t i=1;
+
+		/////////////////////////////       若近处两corner找到，且距离合理		/////////////////////////////
 
 		if(  !RoundaboutTag &&LeftCorner[0] && RightCorner[0] && LeftCorner[0]->x < LeftCorner[1]->x + 5 && RightCorner[0]->x + 5 > RightCorner[1]->x){
 			Base_x = (LeftCorner[0]->x + RightCorner[0]->x)/2;
@@ -356,6 +378,7 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 
 			while(!FindWhite && i < Base_y-(LeftCorner[1]->y+RightCorner[1]->y)/2.0){
 				if(GetBit(Bin,Base_x, Base_y - i) == BLACK){
+
 					FindBlack = true;
 				}
 				else if(FindBlack  &&  GetBit(Bin, Base_x, Base_y - i) == WHITE){
@@ -386,11 +409,11 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 					TyperPtr->WriteString("crossroad");
 				}
 				if(use_bt)
-					BluetoothPtr->SendStr("crossroad\t");
+					BluetoothPtr->SendStr("crossroad1\t");
 				return Crossroad;
 			}
 		}
-
+		/////////////////////////////////// 若近处左corner找到         右corner丢失	/////////////////////
 		else if( !RoundaboutTag &&LeftCorner[0] && !RightCorner[0] && LeftCorner[0]->x < LeftCorner[1]->x+5){
 			Base_x = (LeftCorner[0]->x + 79)/2;
 			Base_y = LeftCorner[0]->y;
@@ -426,7 +449,7 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 					TyperPtr->WriteString("crossroad");
 				}
 				if(use_bt)
-					BluetoothPtr->SendStr("crossroad\t");
+					BluetoothPtr->SendStr("crossroad2\t");
 				return Crossroad;
 			}
 		}
@@ -465,7 +488,7 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 					TyperPtr->WriteString("crossroad");
 				}
 				if(use_bt)
-					BluetoothPtr->SendStr("crossroad\t");
+					BluetoothPtr->SendStr("crossroad3\t");
 				return Crossroad;
 			}
 		}
@@ -504,7 +527,7 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 				TyperPtr->WriteString("crossroad");
 				}
 				if(use_bt)
-					BluetoothPtr->SendStr("crossroad\t");
+					BluetoothPtr->SendStr("crossroad4\t");
 				return Crossroad;
 			}
 		}
@@ -539,10 +562,10 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 			if(!FindBlack){
 				if(use_TFT){
 					TftPtr->SetRegion(Lcd::Rect(2,61,80,12));
-					TyperPtr->WriteString("crossroad2");
+					TyperPtr->WriteString("crossroad5");
 				}
 				if(use_bt)
-					BluetoothPtr->SendStr("crossroad2\t");
+					BluetoothPtr->SendStr("crossroad5\t");
 				return Crossroad2;
 			}
 
@@ -578,14 +601,14 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 			if(!FindBlack){
 				if(use_TFT){
 					TftPtr->SetRegion(Lcd::Rect(2,61,80,12));
-					TyperPtr->WriteString("crossroad2");
+					TyperPtr->WriteString("crossroad6");
 				}
 				if(use_bt)
-					BluetoothPtr->SendStr("crossroad2\t");
+					BluetoothPtr->SendStr("crossroad6\t");
 				return Crossroad2;
 			}
 		}
-		else if(System::Time()>3000&&GetBit(Bin,0,LeftCorner[0]->y-6) == BLACK && GetBit(Bin,79,RightCorner[0]->y-6) == BLACK )  {//!LeftCorner[1] && !RightCorner[1] && !RoundaboutTag &&if( System::Time()10000)
+		else if(ObstacleEnd && StartEncoderValue <= -6000 && GetBit(Bin,0,LeftCorner[0]->y) == BLACK && GetBit(Bin,79,RightCorner[0]->y) == BLACK )  {//!LeftCorner[1] && !RightCorner[1] && !RoundaboutTag &&if( System::Time()10000)
 			int8_t Base_x = (LeftCorner[0]->x + RightCorner[0]->x)/2;
 			int8_t Base_y = (LeftCorner[0]->y + RightCorner[0]->y)/2;
 			bool FindBlack = false;
@@ -635,7 +658,7 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 				LeftStraightCount++;
 
 		}
-		if(!RoundaboutTag && System::Time() > 3000 &&( LeftStraightCount > MidPointNumber-9|| RightStraightCount > MidPointNumber - 9 || MidStraightCount > MidPointNumber-9)){
+		if(!RoundaboutTag && StartEncoderValue <= -6000 &&( LeftStraightCount > MidPointNumber-6|| RightStraightCount > MidPointNumber - 6 || MidStraightCount > MidPointNumber-6)){
 			Point* LeftCor = LeftCorner[1]?LeftCorner[1]:(LeftCorner[0]?LeftCorner[0]:NULL);
 			int LeftCorNo = LeftCor?(59- LeftCor->y)/3:0;
 			Point* RightCor = RightCorner[1]?RightCorner[1]:(RightCorner[0]?RightCorner[0]:NULL);
@@ -650,7 +673,27 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 				if(in && RightEdge[i].x - LeftEdge[i].x + 3 > RightEdge[i-1].x - LeftEdge[i - 1].x)
 					out = true;
 			}
-			if(LeftCor && LeftCor->y<30 && LeftCor->y > 3 && (!RightCor) && out && GetBit(Bin,LeftCor->x,LeftCor->y-3) == WHITE){
+			bool LeftObstacleFound = false;
+			bool RightObstacleFound = false;
+
+			int lc = 0,rc = 0;
+			for(int i = 0 ; i < 4 ; i ++){
+				if(GetBit(Bin,(-LeftEdge[15 + i].x + RightEdge[15 + i].x)/3 + LeftEdge[15 + i].x,LeftEdge[15+i].y  ) == BLACK
+						&&GetBit(Bin,(-LeftEdge[15 + i].x + RightEdge[15 + i].x)/ 3 *2 + LeftEdge[15 + i].x,LeftEdge[15+i].y  ) == WHITE){
+					lc++;
+				}
+				else if(GetBit(Bin,(-LeftEdge[15 + i].x + RightEdge[15 + i].x)/3*2 + LeftEdge[15 + i].x,LeftEdge[15+i].y  ) == BLACK
+						&&GetBit(Bin,(-LeftEdge[15 + i].x + RightEdge[15 + i].x)/ 3 + LeftEdge[15 + i].x,LeftEdge[15+i].y  ) == WHITE){
+					rc++;
+				}
+			}
+			if(lc  >= 2)
+				LeftObstacleFound = true;
+
+			else if(rc >= 2)
+				RightObstacleFound = true;
+
+			if(LeftObstacleFound || (LeftCor && LeftCor->y<30 && LeftCor->y > 5  && out && GetBit(Bin,LeftCor->x,LeftCor->y-5) == WHITE)){
 				if(use_TFT){
 					TftPtr->SetRegion(Lcd::Rect(2,61,80,12));
 					TyperPtr->WriteString("LObstacle");
@@ -659,7 +702,7 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 					BluetoothPtr->SendStr("LObstacle\t");
 				return LeftObstacle;
 			}
-			else if(RightCor && RightCor->y< 30 && RightCor->y > 3 && !LeftCor && out && GetBit(Bin,RightCor->x,RightCor->y-3) == WHITE){
+			else if(RightObstacleFound || (RightCor && RightCor->y< 30 && RightCor->y > 5 && out && GetBit(Bin,RightCor->x,RightCor->y-5) == WHITE)){
 				if(use_TFT){
 					TftPtr->SetRegion(Lcd::Rect(2,61,80,12));
 					TyperPtr->WriteString("RObstacle");
@@ -677,18 +720,52 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 			return Straight;
 		}
 
-	if(!RoundaboutTag &&LeftEdge[0].x == LeftEdge[3].x  && LeftEdge[3].x == LeftEdge[6].x && LeftEdge[6].x == 0
-			&& RightEdge[0].x == RightEdge[3].x && RightEdge[3].x == RightEdge[6].x && RightEdge[6].x == 79){
-		if(use_TFT){
-			TftPtr->SetRegion(Lcd::Rect(2,61,80,12));
-			TyperPtr->WriteString("Crossroad3");
+	int WhiteCount = 0;
+	for(int i = 0 ; i < 6 ; i ++){
+		if(LeftEdge[i].x == 0 && RightEdge[i].x == 79){
+			WhiteCount ++;
 		}
-		if(use_bt)
-			BluetoothPtr->SendStr("Crossroad3\t");
-		return Crossroad3;
+	}
+
+	int zh = 0;
+
+	for(int i = 0 ; i < 10 ; i ++){
+		if( GetBit(Bin,i,59) == WHITE &&  GetBit(Bin,79 - i,59) == WHITE)
+			zh++;
 	}
 
 
+	if(!RoundaboutTag && zh >= 5){
+		if(LeftCorner[1] && !RightCorner[1]){
+			if(use_TFT){
+				TftPtr->SetRegion(Lcd::Rect(2,61,80,12));
+				TyperPtr->WriteString("Crossroad3");
+			}
+			if(use_bt)
+				BluetoothPtr->SendStr("Crossroad3\t");
+			return Crossroad3;
+
+		}
+		else if(!LeftCorner[1] && RightCorner[1]){
+			if(use_TFT){
+				TftPtr->SetRegion(Lcd::Rect(2,61,80,12));
+				TyperPtr->WriteString("Crossroad4");
+			}
+			if(use_bt)
+				BluetoothPtr->SendStr("Crossroad4\t");
+			return Crossroad4;
+		}
+		else {
+			if(use_TFT){
+				TftPtr->SetRegion(Lcd::Rect(2,61,80,12));
+				TyperPtr->WriteString("Crossroad5");
+			}
+			if(use_bt)
+				BluetoothPtr->SendStr("Crossroad5\t");
+			return Crossroad5;
+		}
+
+	}
 
 
 
@@ -701,59 +778,8 @@ TrackState ModifyEdge(const Byte* Bin , Point* LeftEdge,  Point* RightEdge, Poin
 	return Go;
 }
 
-void TransformEdge(Point LeftEdge[], Point RightEdge[], Point* MidPoint, Point* ModifiedMidPoint, uint8_t LeftEdgeNum, uint8_t RightEdgeNum,uint8_t MidPointNum, uint8_t& ModifiedMidPointNum){
-	for(int i = 0 ; i < LeftEdgeNum ; i ++){
-		if(LeftEdge[i].x<0) LeftEdge[i].x = 0;
 
-		else if(LeftEdge[i].x > 79)  LeftEdge[i].x = 79;
-
-		int t =LeftEdge[i].x;
-		LeftEdge[i].x =transformMatrix[t][59-(int)(LeftEdge[i].y)][0];
-		LeftEdge[i].y = 59-transformMatrix[t][59-(int)(LeftEdge[i].y)][1];
-	}
-	for(int i = 0 ; i < RightEdgeNum ; i ++){
-		if(RightEdge[i].x<0) RightEdge[i].x = 0;
-		else if(RightEdge[i].x > 79)  RightEdge[i].x = 79;
-
-		int t = RightEdge[i].x;
-		RightEdge[i].x = transformMatrix[t][59-(int)RightEdge[i].y][0];
-		RightEdge[i].y = 59-transformMatrix[t][59-(int)RightEdge[i].y][1];
-	}
-	for(int i = 0 ; i < MidPointNum ; i ++){
-		if(MidPoint[i].x < 0) MidPoint[i].x = 0;
-		else if(MidPoint[i].x > 79)  MidPoint[i].x = 79;
-		int t =MidPoint[i].x;
-		MidPoint[i].x = transformMatrix[(int)MidPoint[i].x][59-(int)MidPoint[i].y][0];
-		MidPoint[i].y =59- transformMatrix[(int)MidPoint[i].x][59-(int)MidPoint[i].y][1];
-	}
-	for(int i = 2 ; i < MidPointNum-2 ; i ++){
-		MidPoint[i].x = (MidPoint[i-2].x + MidPoint[i-1].x + MidPoint[i].x + MidPoint[i+1].x + MidPoint[i+2].x)/5;
-	}
-	ModifiedMidPointNum  =0;
-	int i = 0 ;
-	while( MidPoint[i].y > 30 && i < MidPointNum){
-		if(i == 0 ){
-			ModifiedMidPoint[ModifiedMidPointNum] = MidPoint[i];
-			ModifiedMidPointNum++;
-		}
-		else{
-//			if(MidPoint[i].y == ModifiedMidPoint[ModifiedMidPointNum-1].y )
-//				ModifiedMidPoint[ModifiedMidPointNum-1].x = (ModifiedMidPoint[ModifiedMidPointNum-1].x + MidPoint[i].x)/2;
-			 if(MidPoint[i].y < ModifiedMidPoint[ModifiedMidPointNum-1].y-1){
-				ModifiedMidPoint[ModifiedMidPointNum] = MidPoint[i];
-				ModifiedMidPointNum ++;
-			}
-		}
-		i++;
-	}
-
-
-
-	return;
-}
-
-
-float angDiff = 3;//3
+float angDiff = 4;//3//2
 float DiffMax = 8;
 
 float bottomLine_k 	= 0.2;//0.2
@@ -762,7 +788,7 @@ float topLine_k 	= 0.4;//0.9
 
 float r_bottomLine_k 	= 0.2;
 float r_middleLine_k 	= 0.5;
-float r_topLine_k		= 0.8;
+float r_topLine_k		= 0.4;//0.8
 
 float r_bottomLine_dis 		= 	30;
 
@@ -779,15 +805,13 @@ float slope_Diff = 0;
 
 int zhanglin = 0;
 
-bool LeftObstacleBegin = false;
-bool RightObstacleBegin = false;
-bool ObstacleEnd = true;
-int ObstacleEncoderValue = 0;
+
 
 float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, Point* MidPoint,const uint8_t MidPointNum,const TrackState trackstate,Point* LeftCorner[], Point* RightCorner[],uint8_t & LeftEdgeNum,uint8_t & RightEdgeNum){
 
 	if(trackstate == Unknown)
 		return 0;
+
 
 	Point* LeftCor = (LeftCorner[0]?LeftCorner[0]:(LeftCorner[1]?LeftCorner[1]:NULL));
 	Point* RightCor = (RightCorner[0]?RightCorner[0]:(RightCorner[1]?RightCorner[1]:NULL));
@@ -814,7 +838,7 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
     	RightObstacleBegin = true;
     	ObstacleEnd = false;
     }
-    else if(ObstacleEncoderValue < -6000){
+    else if(ObstacleEncoderValue < -8000){
     	LeftObstacleBegin = false;
     	RightObstacleBegin = false;
     	ObstacleEnd = true;
@@ -825,13 +849,13 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
     	RoundaboutPreTag = true;
     }
 
-	if( RoundaboutPreTag && !RoundaboutTag &&RoundaboutCount <= 2 && ( ( LeftCor && LeftCor->y > 30 ) || (RightCor && RightCor->y>30)) ){// &&  LeftCor && LeftCor->y > 30
+	if( RoundaboutPreTag  && !RoundaboutTag && ( ( LeftCor && LeftCor->y > 20  ) || (RightCor && RightCor->y > 20))){//&& !RoundaboutTag &&RoundaboutCount <= 2 && ( ( LeftCor && LeftCor->y > 20  ) || (RightCor && RightCor->y > 20))
 		InRoundStart = true;
 		RoundaboutTag = true;
 		RoundaboutPreTag = false;
 		OutRoundEnd = false;
 	}
-	else if(RoundaboutPreTag && !RoundaboutTag &&RoundaboutCount > 2 && ( ( LeftCor && LeftCor->y > 30 ) || (RightCor && RightCor->y>30)) ){// &&  RightCor && RightCor->y > 30
+	else if(RoundaboutPreTag && !RoundaboutTag  && ( ( LeftCor && LeftCor->y > 20  ) || (RightCor && RightCor->y > 20))  ){//&& !RoundaboutTag &&RoundaboutCount > 2 && ( ( LeftCor && LeftCor->y > 20) || (RightCor  && RightCor->y > 20))
 		InRoundStart = true;
 		RoundaboutTag = true;
 		RoundaboutPreTag = false;
@@ -843,15 +867,15 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
 		InRoundStart = false;
 		InRoundEncoderValue = 0;
 	}
-	if(RoundaboutCount <= 2 && InRoundEnd && LeftCor && LeftCor->y > 10  && GetBit(Bin,LeftCor->x,LeftCor->y-6) == WHITE ){
+	if(RoundaboutCount % 2 == 1 && InRoundEnd && LeftCor   && GetBit(Bin,LeftCor->x,LeftCor->y-10) == WHITE && GetBit(Bin,LeftCor->x,LeftCor->y + 10) == WHITE && LeftCor->y > 20){//&& LeftCor->y > 20
 		OutRoundStart = true;
 		InRoundEnd = false;
 	}
-	else if(RoundaboutCount > 2 && InRoundEnd && RightCor && RightCor->y > 10  && GetBit(Bin,RightCor->x,RightCor->y-6) == WHITE ){
+	else if( RoundaboutCount % 2 == 0 && InRoundEnd && RightCor  && GetBit(Bin,RightCor->x,RightCor->y-10) == WHITE &&  GetBit(Bin,RightCor->x,RightCor->y + 10) == WHITE && RightCor->y > 20){//&& RightCor->y > 20
 		OutRoundStart = true;
 		InRoundEnd = false;
 	}
-    if(OutRoundEncoderValue < -4000){
+    if(OutRoundEncoderValue < -3000){
 		OutRoundEncoderValue = 0;
 		OutRoundEnd = true;
 		OutRoundStart = false;
@@ -860,21 +884,8 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
 		RoundaboutCount++;
 	}
 
-     if(trackstate == Crossroad3){}
 
-	//find the diff
-    else if(trackstate == Crossroad2){
-		Diff = 0.5*((LeftCorner[0]->x + RightCorner[0]->x)/2 - 39.5);
-		if(use_TFT ){
-			TftPtr->SetRegion(Lcd::Rect(2,73,80,12));
-			TyperPtr->WriteString("out of roundabout\t");
-		}
-		if(use_bt)
-			BluetoothPtr->SendStr("out of roundabout\t");
-	}
-
-
-	else if(!RoundaboutTag || (InRoundEnd && !OutRoundStart) ){//|| (trackstate == Roundabout &&LeftCor->y < 5 )  (trackstate == Roundabout &&LeftCor->y < 10 )(!LeftCor || ( LeftCor->y<30 && LeftCor->x > 30))  if(!RoundaboutTag  ||  (trackstate == Roundabout && LeftCor->y<20) ){//||(trackstate == Roundabout && LeftCor->y<20
+	 if((!RoundaboutTag || (InRoundEnd && !OutRoundStart)) && (!( trackstate == Crossroad2 ||trackstate == Crossroad3 || trackstate == Crossroad4 || trackstate == Crossroad5 )) ){//|| (trackstate == Roundabout &&LeftCor->y < 5 )  (trackstate == Roundabout &&LeftCor->y < 10 )(!LeftCor || ( LeftCor->y<30 && LeftCor->x > 30))  if(!RoundaboutTag  ||  (trackstate == Roundabout && LeftCor->y<20) ){//||(trackstate == Roundabout && LeftCor->y<20
 			Order = 1;
 			float slope = 0;
 			float pos= 0;
@@ -911,7 +922,7 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
 						k= middleLine_k;
 					else
 						k=topLine_k;
-					MidPoint[Order].x = RightEdge[Order].x - 12;
+					MidPoint[Order].x = RightEdge[Order].x - 13;
 					slope+=k*(MidPoint[Order].x - 39.5);
 					Order++;
 				}
@@ -936,7 +947,7 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
 						k= middleLine_k;
 					else
 						k=topLine_k;
-					MidPoint[Order].x = LeftEdge[Order].x + 12.8;
+					MidPoint[Order].x = LeftEdge[Order].x + 12;
 					slope+=k*(MidPoint[Order].x - 39.5);
 					Order++;
 				}
@@ -955,23 +966,23 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
 
 		}
 
-	else {
+	else if(InRoundStart && !InRoundEnd){
 		Order = 1;
 		float pos = 0;
 		float slope = 0;
 		while(Order < PosRow){
 			if(Order < 5){
-				if(RoundaboutCount <= 2 )
-					MidPoint[Order].x = LeftEdge[Order].x  + 30;
+				if(RoundaboutCount % 2 )
+					MidPoint[Order].x = LeftEdge[Order].x  + 35;
 				else
-					MidPoint[Order].x = RightEdge[Order].x  - 30;
+					MidPoint[Order].x = RightEdge[Order].x  - 40;
 			}
 			else if(Order < 10){
-				if(RoundaboutCount <= 2 ){
+				if(RoundaboutCount % 2 == 1 ){
 					if(LeftEdge[Order].x <= 1)
 						MidPoint[Order].x = 10;
 					else if(LeftEdge[Order].slope <= 1)
-						MidPoint[Order].x = LeftEdge[Order].x  + 20;
+						MidPoint[Order].x = LeftEdge[Order].x  + 25;//20
 					else
 						MidPoint[Order].x = LeftEdge[Order].x +	25;
 				}
@@ -979,27 +990,27 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
 					if(RightEdge[Order].x >=78 )
 						MidPoint[Order].x = 70;
 					else if(RightEdge[Order].slope >= 1)
-						MidPoint[Order].x = RightEdge[Order].x  - 20;
+						MidPoint[Order].x = RightEdge[Order].x  - 35;
 					else
-						MidPoint[Order].x = RightEdge[Order].x -	25;
+						MidPoint[Order].x = RightEdge[Order].x -  35;
 				}
 			}
 			else{
-				if(RoundaboutCount<=2){
+				if(RoundaboutCount % 2 == 1){
 					if(LeftEdge[Order].x <= 1)
 						MidPoint[Order].x = 0;
 					else if(LeftEdge[Order].slope<=1)
-						MidPoint[Order].x = LeftEdge[Order].x  + 15;
+						MidPoint[Order].x = LeftEdge[Order].x  + 15;//15
 					else
-						MidPoint[Order].x = LeftEdge[Order].x  + 20;
+						MidPoint[Order].x = LeftEdge[Order].x  + 15;//20
 				}
 				else{
 					if(RightEdge[Order].x >= 78)
 						MidPoint[Order].x = 70;
 					else if(RightEdge[Order].slope>=1)
-						MidPoint[Order].x = RightEdge[Order].x  - 15;
+						MidPoint[Order].x = RightEdge[Order].x  - 30;//25
 					else
-						MidPoint[Order].x = RightEdge[Order].x  - 20;
+						MidPoint[Order].x = RightEdge[Order].x  - 30;
 				}
 			}
 			Order++;
@@ -1034,6 +1045,106 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
 		}
 	}
 
+	else if(OutRoundStart && !OutRoundEnd){
+		Order = 1;
+		float pos = 0;
+		float slope = 0;
+		while(Order < PosRow){
+			if(Order < 5){
+				if(RoundaboutCount % 2==1 )
+					MidPoint[Order].x = LeftEdge[Order].x  + 35;
+				else
+					MidPoint[Order].x = RightEdge[Order].x  - 40;
+			}
+			else if(Order < 10){
+				if(RoundaboutCount % 2==1 ){
+					if(LeftEdge[Order].x <= 1)
+						MidPoint[Order].x = 20;
+					else if(LeftEdge[Order].slope <= 1)
+						MidPoint[Order].x = LeftEdge[Order].x  + 25;//20
+					else
+						MidPoint[Order].x = LeftEdge[Order].x +	20;
+				}
+				else {
+					if(RightEdge[Order].x >=78 )
+						MidPoint[Order].x = 70;
+					else if(RightEdge[Order].slope >= 1)
+						MidPoint[Order].x = RightEdge[Order].x  - 35;
+					else
+						MidPoint[Order].x = RightEdge[Order].x -  30;
+				}
+			}
+			else{
+				if(RoundaboutCount % 2==1){
+					if(LeftEdge[Order].x <= 1)
+						MidPoint[Order].x = 10;
+					else if(LeftEdge[Order].slope<=1)
+						MidPoint[Order].x = LeftEdge[Order].x  + 15;//15
+					else
+						MidPoint[Order].x = LeftEdge[Order].x  + 20;//20
+				}
+				else{
+					if(RightEdge[Order].x >= 78)
+						MidPoint[Order].x = 70;
+					else if(RightEdge[Order].slope>=1)
+						MidPoint[Order].x = RightEdge[Order].x  - 25;//25
+					else
+						MidPoint[Order].x = RightEdge[Order].x  - 25;
+				}
+			}
+			Order++;
+		}
+		for(int i = 2 ; i < PosRow-3 ; i ++){
+			MidPoint[i].x = (MidPoint[i-2].x + MidPoint[i-1].x + MidPoint[i].x + MidPoint[i+1].x + MidPoint[i+2].x)/5;
+		}
+		while(Order--){
+			if(Order < 4){
+				slope += r_bottomLine_k*(MidPoint[Order].x - 39.5);
+//				pos+= ( MidPoint[Order].x - 39.5 );
+			}
+			else if(Order < 8)
+				slope += r_middleLine_k*(MidPoint[Order].x - 39.5);
+			else
+				slope += r_topLine_k*(MidPoint[Order].x - 39.5);
+		}
+
+//		pos/=5;
+		slope/=2;
+		slope/=PosRow;
+		Diff = 1.2*slope_p * slope +1.3* pos_p * pos;
+		posDiff = 1.3*pos_p * pos;
+		slopeDiff = 1.2*slope_p * slope;
+
+		if(use_TFT){
+			TftPtr->SetRegion(Lcd::Rect(2,73,80,12));
+			TyperPtr->WriteString("in roudabout");
+		}
+		if(use_bt){
+			BluetoothPtr->SendStr("in roudabout\t");
+		}
+	}
+
+
+	else if(trackstate == Crossroad3){
+    	 Diff = 4;
+     }
+
+ 	else if(trackstate == Crossroad4)
+ 		Diff = -4;
+
+ 	else if(trackstate == Crossroad5)
+ 		Diff =  0;
+
+	//find the diff
+    else if(trackstate == Crossroad2){
+		Diff = 0.5*((LeftCorner[0]->x + RightCorner[0]->x)/2 - 39.5);
+		if(use_TFT ){
+			TftPtr->SetRegion(Lcd::Rect(2,73,80,12));
+			TyperPtr->WriteString("out of roundabout\t");
+		}
+		if(use_bt)
+			BluetoothPtr->SendStr("out of roundabout\t");
+	}
 
 //		int count = 0 ;
 //		for(int i = 0 ; i < 10 ; i ++){
@@ -1166,4 +1277,8 @@ float FindPath(const Byte * Bin, const Point* LeftEdge, const Point* RightEdge, 
 
 
 #endif /* SRC_CAMERAHEADER_FINDEDGE_H_ */
+
+
+
+
 

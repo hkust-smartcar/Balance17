@@ -1,15 +1,22 @@
 /*
  * Variable.h
  *
+ *  Created on: Jul 9, 2017
+ *      Author: lzhangbj
+ */
+
+#ifndef SRC_6000_VARIABLE_H_
+#define SRC_6000_VARIABLE_H_
+/*
+ * Variable.h
+ *
  *  Created on: Jul 3, 2017
  *      Author: lzhangbj
  */
 
-#ifndef SRC_BA_VARIABLE_H_
-#define SRC_BA_VARIABLE_H_
 
-#include "CameraHeader/FindEdge.h"
-#include <libsc/led.h>b
+#include "6000/FindEdge.h"
+#include <libsc/led.h>
 
 #include <libsc/k60/ov7725.h>
 
@@ -56,7 +63,7 @@ Button			* Button2Ptr;
 
 
 
-float balAngle = 79;//70
+float balAngle = 85.2;//70
 double inputTargetSpeed = 0;
 double leftPowSpeedP = 0, leftPowSpeedI = 0, leftPowSpeedD = 0;
 double rightPowSpeedP = 0, rightPowSpeedI = 0, rightPowSpeedD = 0;
@@ -214,3 +221,8 @@ bool pitState = true;
 
 
 #endif /* SRC_BALANCEFILE_VARIABLE_H_ */
+
+
+
+
+

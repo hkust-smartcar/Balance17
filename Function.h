@@ -1,16 +1,27 @@
 /*
+ * Function.h
+ *
+ *  Created on: Jul 9, 2017
+ *      Author: lzhangbj
+ */
+
+#ifndef SRC_6000_FUNCTION_H_
+#define SRC_6000_FUNCTION_H_
+
+/*
  * Function.cpp
  *
  *  Created on: Jul 3, 2017
  *      Author: lzhangbj
  */
 
-#ifndef SRC_TIMFILE_FUNCTION_CPP_
-#define SRC_TIMFILE_FUNCTION_CPP_
 
 
-#include "TimFile/Variable.h"
+#include "6000/Variable.h"
 
+
+
+bool stop = 0;
 
 double arrAvg(double arr[], int size, int& counter, double& total, double newVal) {
 
@@ -79,7 +90,7 @@ void CarInit(){
 
 		//Constant
 
-		targetSpeed = -6000;
+		targetSpeed = -8000;
 		targetAng = balAngle-angDiff;	//Angle to run  70
 		inputTargetSpeed = 8000;
 //		leftPowSpeedP = 0.002;
@@ -109,8 +120,8 @@ void CarInit(){
 		speedAngD = 10;
 		targetAngLim = 15;
 		targetSpeedAngK = 1500;
-		targetAngSpeedP = -0.0002;
-		targetAngSpeedI = -0.0003;
+		targetAngSpeedP = -0.0003;//-0.0002
+		targetAngSpeedI = -0.0003;//-0.0003//5//2
 		targetAngSpeedD = 0.00001;
 
 		camEnable = 1;
@@ -176,14 +187,14 @@ void Pit_Interrupt(Pit* pit){
 	//speed
 	LeftEncoderPtr->Update();
 	temp = LeftEncoderPtr->GetCount()/dt;
-	if (temp>50000 || temp<-50000) {
+	if (temp>30000 || temp<-30000) {
 		temp = leftSpeed;
 	}
 //	leftSpeed = arrAvg(leftSpeedArr, speedArrSize, leftSpeedArrCounter, leftSpeedTotal, temp);
 	leftSpeed = temp;
 	RightEncoderPtr->Update();
 	temp = -RightEncoderPtr->GetCount()/dt;
-	if (temp>50000 || temp<-50000) {
+	if (temp>30000 || temp<-30000) {
 		temp = rightSpeed;
 	}
 //	rightSpeed = arrAvg(rightSpeedArr, speedArrSize, rightSpeedArrCounter, rightSpeedTotal, temp);
@@ -217,7 +228,6 @@ void Pit_Interrupt(Pit* pit){
 	PrevSpeedErr = CurSpeedErr;
 	CurSpeedErr = rightSpeed - leftSpeed;
 
-
 	if(OutRoundStart)
 		OutRoundEncoderValue += curSpeed*dt;
 	if(InRoundStart)
@@ -226,6 +236,9 @@ void Pit_Interrupt(Pit* pit){
 	if(LeftObstacleBegin || RightObstacleBegin){
 		ObstacleEncoderValue += curSpeed*dt;
 	}
+
+	if(StartEncoderValue > -6000)
+		StartEncoderValue+=curSpeed;
 
 	//angle
 	MpuPtr->Update(1);
@@ -239,12 +252,16 @@ void Pit_Interrupt(Pit* pit){
 	prevAng = curAng;
 	curAng = arrAvg(angArr, angArrSize, angCounter, angTotal, fabs((0.98*gyroAng)+(0.02*accAng)));
 
+
+	if(!(curAng < 200 && curAng > -200))
+		stop = 1;
+
 //	if (loopCounter<500) {
 //		targetAngLim = 0;
 //	}
 
 //	else {
-		targetAngLim = 15;
+		targetAngLim = 8;
 //	}
 
 	//targetAng-speedDiff PID
@@ -328,7 +345,9 @@ void Pit_Interrupt(Pit* pit){
 
 
 
-	int powlimit = 500;
+	int powlimit =500;
+	if(curSpeed < -9000)
+		powlimit = 500;
 	//power limit
 	if (leftPow > powlimit) {
 		leftPow = powlimit;
@@ -495,3 +514,7 @@ void SetLimit(float& differ, float limit){
 
 
 #endif /* SRC_TIMFILE_FUNCTION_CPP_ */
+
+
+
+
